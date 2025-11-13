@@ -1,0 +1,2205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Dashboard Builder</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
+            min-height: 100vh;
+        }
+        
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            z-index: 100;
+        }
+        
+        .sidebar-header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .sidebar-header h2 {
+            font-size: 1.3em;
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-section {
+            padding: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .sidebar-section h3 {
+            font-size: 1.1em;
+            color: #1e3c72;
+            margin-bottom: 15px;
+        }
+        
+        .component-btn {
+            display: block;
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background: white;
+            border: 2px solid #2a5298;
+            border-radius: 8px;
+            color: #2a5298;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+        }
+        
+        .component-btn:hover {
+            background: #2a5298;
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .component-btn .icon {
+            margin-right: 8px;
+        }
+        
+        /* Main Dashboard Area */
+        .dashboard-main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .dashboard-header {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .dashboard-title {
+            font-size: 2em;
+            color: #1e3c72;
+            margin-bottom: 10px;
+        }
+        
+        .dashboard-title input {
+            border: none;
+            font-size: 1em;
+            font-weight: 700;
+            color: #1e3c72;
+            background: transparent;
+            width: 100%;
+            padding: 5px;
+        }
+        
+        .dashboard-title input:focus {
+            outline: 2px solid #2a5298;
+            border-radius: 5px;
+        }
+        
+        .dashboard-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #2a5298;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #1e3c72;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(12, 1fr);
+        }
+        
+        .dashboard-component {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .component-header {
+            background: #f8f9fa;
+            padding: 15px;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+        }
+        
+        .component-title {
+            font-weight: 600;
+            color: #1e3c72;
+            font-size: 1.1em;
+        }
+        
+        .component-title input {
+            border: none;
+            background: transparent;
+            font-weight: 600;
+            color: #1e3c72;
+            font-size: 1em;
+            width: 100%;
+        }
+        
+        .component-title input:focus {
+            outline: 1px solid #2a5298;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        
+        .component-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .action-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #e9ecef;
+            color: #495057;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+        
+        .action-btn:hover {
+            background: #2a5298;
+            color: white;
+        }
+        
+        .component-content {
+            padding: 20px;
+        }
+        
+        /* Size classes */
+        .size-small {
+            grid-column: span 3;
+            min-height: 250px;
+        }
+        
+        .size-medium {
+            grid-column: span 6;
+            min-height: 400px;
+        }
+        
+        .size-large {
+            grid-column: span 12;
+            min-height: 500px;
+        }
+        
+        .size-chart {
+            grid-column: span 6;
+            min-height: 450px;
+        }
+        
+        /* Upload Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h2 {
+            color: #1e3c72;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 2em;
+            cursor: pointer;
+            color: #6c757d;
+        }
+        
+        .close-modal:hover {
+            color: #dc3545;
+        }
+        
+        .upload-box {
+            border: 3px dashed #2a5298;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9fa;
+        }
+        
+        .upload-box:hover {
+            border-color: #7e22ce;
+            background: #f0f0ff;
+        }
+        
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        /* Filter Component */
+        .filter-select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: #2a5298;
+        }
+        
+        /* Text Box Component */
+        .text-box-content {
+            min-height: 100px;
+        }
+        
+        .text-editor {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+        }
+        
+        .text-editor:focus {
+            outline: none;
+            border-color: #2a5298;
+        }
+        
+        .text-display {
+            line-height: 1.6;
+            color: #495057;
+        }
+        
+        /* Stats Component */
+        .stats-grid-comp {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-card-comp {
+            background: linear-gradient(135deg, #2a5298 0%, #7e22ce 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value-comp {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label-comp {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        /* Chart canvas */
+        .chart-canvas-container {
+            position: relative;
+            height: 350px;
+        }
+        
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        
+        /* Settings Panel */
+        .settings-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .settings-group {
+            margin-bottom: 15px;
+        }
+        
+        .settings-group label {
+            display: block;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        
+        .settings-group select,
+        .settings-group input {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .settings-group select:focus,
+        .settings-group input:focus {
+            outline: none;
+            border-color: #2a5298;
+        }
+        
+        /* Toggle switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: #2a5298;
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+        
+        /* Dragging styles */
+        .sortable-ghost {
+            opacity: 0.4;
+        }
+        
+        .sortable-drag {
+            opacity: 0.8;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #2a5298;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #1e3c72;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>🎨 Dashboard Builder</h2>
+                <p style="font-size: 0.9em; opacity: 0.9;">Drag components to customize</p>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>📊 Data</h3>
+                <button class="component-btn" onclick="openUploadModal()">
+                    <span class="icon">📁</span> Upload Data File
+                </button>
+                <div id="dataStatus" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; font-size: 0.85em; color: #6c757d;">
+                    No data loaded
+                </div>
+            </div>
+            
+            <div class="sidebar-section" id="globalFiltersSection" style="display: none;">
+                <h3>🎛️ Global Filters</h3>
+                <p style="font-size: 0.85em; color: #6c757d; margin-bottom: 10px;">Apply to all charts</p>
+                
+                <!-- Timeline Slider -->
+                <div id="globalTimelineSlider" style="display: none; margin-bottom: 15px; padding: 15px; background: white; border: 2px solid #e9ecef; border-radius: 8px;">
+                    <label style="font-weight: 600; color: #495057; display: block; margin-bottom: 8px; font-size: 0.9em;">
+                        ⏱️ Weeks: <span id="globalWeekRange">All</span>
+                    </label>
+                    <input type="range" id="globalWeekMin" min="0" max="52" value="0" 
+                           style="width: 48%; margin-right: 2%;"
+                           oninput="updateGlobalTimeline()">
+                    <input type="range" id="globalWeekMax" min="0" max="52" value="52" 
+                           style="width: 48%; margin-left: 2%;"
+                           oninput="updateGlobalTimeline()">
+                    <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.8em; color: #6c757d;">
+                        <span id="globalWeekMinLabel">0</span>
+                        <span id="globalWeekMaxLabel">52</span>
+                    </div>
+                </div>
+                
+                <!-- Dynamic Filters Container -->
+                <div id="globalFiltersList"></div>
+                
+                <button class="component-btn" onclick="clearAllGlobalFilters()" style="margin-top: 10px; border-color: #dc3545; color: #dc3545;">
+                    <span class="icon">🔄</span> Clear All Filters
+                </button>
+            </div>
+            
+            <div class="sidebar-section" id="visualSettingsSection" style="display: none;">
+                <h3>🎨 Global Visual Settings</h3>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="useCustomColors" onchange="toggleGlobalCustomColors()" style="margin-right: 8px;">
+                        <span style="font-weight: 600; font-size: 0.9em;">Use Custom Colors</span>
+                    </label>
+                </div>
+                
+                <div id="customColorPickers" style="display: none;">
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; font-size: 0.85em; font-weight: 600; margin-bottom: 5px;">Primary</label>
+                        <input type="color" id="globalPrimaryColor" value="#2a5298" 
+                               onchange="updateGlobalColors()"
+                               style="width: 100%; height: 35px; border-radius: 5px; cursor: pointer;">
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; font-size: 0.85em; font-weight: 600; margin-bottom: 5px;">Secondary</label>
+                        <input type="color" id="globalSecondaryColor" value="#7e22ce" 
+                               onchange="updateGlobalColors()"
+                               style="width: 100%; height: 35px; border-radius: 5px; cursor: pointer;">
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; font-size: 0.85em; font-weight: 600; margin-bottom: 5px;">Accent</label>
+                        <input type="color" id="globalAccentColor" value="#dc3545" 
+                               onchange="updateGlobalColors()"
+                               style="width: 100%; height: 35px; border-radius: 5px; cursor: pointer;">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>🔧 Filters</h3>
+                <p style="font-size: 0.85em; color: #6c757d; margin-bottom: 10px;">
+                    Use Global Filters above, or add individual filters to dashboard
+                </p>
+                <button class="component-btn" onclick="addComponent('filter')">
+                    <span class="icon">🎛️</span> Add Individual Filter
+                </button>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>📈 Charts</h3>
+                <button class="component-btn" onclick="addComponent('line')">
+                    <span class="icon">📈</span> Line Chart
+                </button>
+                <button class="component-btn" onclick="addComponent('bar')">
+                    <span class="icon">📊</span> Bar Chart
+                </button>
+                <button class="component-btn" onclick="addComponent('scatter')">
+                    <span class="icon">⚫</span> Scatter Plot
+                </button>
+                <button class="component-btn" onclick="addComponent('spread')">
+                    <span class="icon">🎯</span> Spread Analysis
+                </button>
+                <button class="component-btn" onclick="addComponent('radar')">
+                    <span class="icon">🎯</span> Radar Chart
+                </button>
+                <button class="component-btn" onclick="addComponent('pie')">
+                    <span class="icon">🥧</span> Pie Chart
+                </button>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>📝 Content</h3>
+                <button class="component-btn" onclick="addComponent('text')">
+                    <span class="icon">📝</span> Text Box
+                </button>
+                <button class="component-btn" onclick="addComponent('stats')">
+                    <span class="icon">📊</span> Stats Summary
+                </button>
+                <button class="component-btn" onclick="addComponent('table')">
+                    <span class="icon">📋</span> Data Table
+                </button>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>⚙️ Dashboard Actions</h3>
+                <button class="component-btn" onclick="clearDashboard()" style="border-color: #dc3545; color: #dc3545;">
+                    <span class="icon">🗑️</span> Clear Dashboard
+                </button>
+                <button class="component-btn" onclick="saveDashboard()" style="border-color: #28a745; color: #28a745;">
+                    <span class="icon">💾</span> Save Layout
+                </button>
+                <button class="component-btn" onclick="exportDashboard()" style="border-color: #17a2b8; color: #17a2b8;">
+                    <span class="icon">📥</span> Export Dashboard
+                </button>
+            </div>
+        </div>
+        
+        <!-- Main Dashboard -->
+        <div class="dashboard-main">
+            <div class="dashboard-header">
+                <div class="dashboard-title">
+                    <input type="text" id="dashboardTitle" value="My Custom Dashboard" placeholder="Enter dashboard title...">
+                </div>
+                <div class="dashboard-controls">
+                    <button class="control-btn btn-primary" onclick="toggleEditMode()">
+                        <span id="editModeText">🔒 Edit Mode: OFF</span>
+                    </button>
+                    <button class="control-btn btn-success" onclick="refreshDashboard()">
+                        🔄 Refresh Data
+                    </button>
+                    <button class="control-btn btn-secondary" onclick="toggleSidebar()">
+                        ◀️ Toggle Sidebar
+                    </button>
+                </div>
+            </div>
+            
+            <div class="dashboard-grid" id="dashboardGrid">
+                <!-- Empty state -->
+                <div class="empty-state" style="grid-column: span 12;">
+                    <div class="empty-state-icon">🎨</div>
+                    <h2>Start Building Your Dashboard</h2>
+                    <p>Upload your data and add components from the sidebar</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Upload Modal -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Upload Data</h2>
+                <button class="close-modal" onclick="closeUploadModal()">×</button>
+            </div>
+            <div class="upload-box" id="uploadBox">
+                <div class="upload-icon">📁</div>
+                <h3>Click to upload or drag & drop</h3>
+                <p>Excel (.xlsx, .xls) or CSV files</p>
+                <input type="file" id="fileInput" style="display: none;" accept=".xlsx,.xls,.csv">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let rawData = [];
+        let filteredData = [];
+        let allColumns = [];
+        let filterColumns = [];
+        let numericColumns = [];
+        let components = [];
+        let componentCounter = 0;
+        let editMode = false;
+        let charts = {};
+        let activeFilters = {};
+        let globalWeekMin = 0;
+        let globalWeekMax = 52;
+        let weeksColumn = null;
+        let useGlobalCustomColors = false;
+        let globalColors = {
+            primary: '#2a5298',
+            secondary: '#7e22ce',
+            accent: '#dc3545'
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeSortable();
+            setupUploadHandlers();
+        });
+
+        function initializeSortable() {
+            const grid = document.getElementById('dashboardGrid');
+            new Sortable(grid, {
+                animation: 150,
+                handle: '.component-header',
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                disabled: !editMode
+            });
+        }
+
+        function setupUploadHandlers() {
+            const uploadBox = document.getElementById('uploadBox');
+            const fileInput = document.getElementById('fileInput');
+            
+            uploadBox.addEventListener('click', () => fileInput.click());
+            
+            uploadBox.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadBox.style.borderColor = '#7e22ce';
+            });
+            
+            uploadBox.addEventListener('dragleave', () => {
+                uploadBox.style.borderColor = '#2a5298';
+            });
+            
+            uploadBox.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadBox.style.borderColor = '#2a5298';
+                const file = e.dataTransfer.files[0];
+                if (file) processFile(file);
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) processFile(file);
+            });
+        }
+
+        function processFile(file) {
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                rawData = XLSX.utils.sheet_to_json(firstSheet);
+                
+                if (rawData.length > 0) {
+                    initializeData();
+                    closeUploadModal();
+                    updateDataStatus();
+                    refreshDashboard();
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        function initializeData() {
+            allColumns = Object.keys(rawData[0]);
+            
+            filterColumns = allColumns.filter(col => 
+                col !== 'ID' && 
+                col !== 'Protocol' && 
+                col !== 'Side' && 
+                col !== 'Trial' &&
+                isNaN(parseFloat(rawData[0][col]))
+            );
+            
+            numericColumns = allColumns.filter(col => {
+                const value = rawData[0][col];
+                return !isNaN(parseFloat(value)) && isFinite(value);
+            });
+            
+            filteredData = [...rawData];
+            
+            // Set up global filters section
+            document.getElementById('globalFiltersSection').style.display = 'block';
+            document.getElementById('visualSettingsSection').style.display = 'block';
+            
+            setupGlobalFilters();
+            setupGlobalTimeline();
+        }
+
+        function setupGlobalFilters() {
+            const container = document.getElementById('globalFiltersList');
+            container.innerHTML = '';
+            
+            filterColumns.forEach(col => {
+                const uniqueValues = [...new Set(rawData.map(row => row[col]).filter(v => v))];
+                
+                const filterDiv = document.createElement('div');
+                filterDiv.style.marginBottom = '15px';
+                filterDiv.innerHTML = `
+                    <label style="display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.85em; color: #495057;">
+                        ${col}
+                    </label>
+                    <select class="filter-select" onchange="applyGlobalFilter('${col}', this.value)" 
+                            style="width: 100%; padding: 8px; border: 2px solid #e9ecef; border-radius: 5px; font-size: 0.85em;">
+                        <option value="all">All</option>
+                        ${uniqueValues.sort().map(val => `
+                            <option value="${val}">${val}</option>
+                        `).join('')}
+                    </select>
+                `;
+                
+                container.appendChild(filterDiv);
+            });
+        }
+
+        function setupGlobalTimeline() {
+            weeksColumn = allColumns.find(col => 
+                col.toLowerCase().includes('week') && col.toLowerCase().includes('post')
+            );
+            
+            if (weeksColumn) {
+                const weeks = rawData.map(row => parseFloat(row[weeksColumn])).filter(w => !isNaN(w));
+                if (weeks.length > 0) {
+                    globalWeekMin = Math.min(...weeks);
+                    globalWeekMax = Math.max(...weeks);
+                    
+                    document.getElementById('globalTimelineSlider').style.display = 'block';
+                    document.getElementById('globalWeekMin').min = globalWeekMin;
+                    document.getElementById('globalWeekMin').max = globalWeekMax;
+                    document.getElementById('globalWeekMin').value = globalWeekMin;
+                    document.getElementById('globalWeekMax').min = globalWeekMin;
+                    document.getElementById('globalWeekMax').max = globalWeekMax;
+                    document.getElementById('globalWeekMax').value = globalWeekMax;
+                    
+                    document.getElementById('globalWeekMinLabel').textContent = globalWeekMin;
+                    document.getElementById('globalWeekMaxLabel').textContent = globalWeekMax;
+                    document.getElementById('globalWeekRange').textContent = `${globalWeekMin} - ${globalWeekMax}`;
+                }
+            }
+        }
+
+        function updateGlobalTimeline() {
+            const minSlider = document.getElementById('globalWeekMin');
+            const maxSlider = document.getElementById('globalWeekMax');
+            
+            let minVal = parseFloat(minSlider.value);
+            let maxVal = parseFloat(maxSlider.value);
+            
+            if (minVal > maxVal) {
+                minSlider.value = maxVal;
+                minVal = maxVal;
+            }
+            
+            document.getElementById('globalWeekMinLabel').textContent = minVal;
+            document.getElementById('globalWeekMaxLabel').textContent = maxVal;
+            document.getElementById('globalWeekRange').textContent = `${minVal} - ${maxVal}`;
+            
+            activeFilters[`${weeksColumn}_min`] = minVal;
+            activeFilters[`${weeksColumn}_max`] = maxVal;
+            
+            refreshDashboard();
+        }
+
+        function applyGlobalFilter(column, value) {
+            if (value === 'all') {
+                delete activeFilters[column];
+            } else {
+                activeFilters[column] = value;
+            }
+            refreshDashboard();
+        }
+
+        function clearAllGlobalFilters() {
+            activeFilters = {};
+            
+            // Reset all dropdowns
+            document.querySelectorAll('#globalFiltersList select').forEach(select => {
+                select.value = 'all';
+            });
+            
+            // Reset timeline
+            if (weeksColumn) {
+                document.getElementById('globalWeekMin').value = globalWeekMin;
+                document.getElementById('globalWeekMax').value = globalWeekMax;
+                document.getElementById('globalWeekMinLabel').textContent = globalWeekMin;
+                document.getElementById('globalWeekMaxLabel').textContent = globalWeekMax;
+                document.getElementById('globalWeekRange').textContent = `${globalWeekMin} - ${globalWeekMax}`;
+            }
+            
+            refreshDashboard();
+        }
+
+        function toggleGlobalCustomColors() {
+            useGlobalCustomColors = document.getElementById('useCustomColors').checked;
+            document.getElementById('customColorPickers').style.display = 
+                useGlobalCustomColors ? 'block' : 'none';
+            refreshDashboard();
+        }
+
+        function updateGlobalColors() {
+            globalColors.primary = document.getElementById('globalPrimaryColor').value;
+            globalColors.secondary = document.getElementById('globalSecondaryColor').value;
+            globalColors.accent = document.getElementById('globalAccentColor').value;
+            refreshDashboard();
+        }
+
+        function updateDataStatus() {
+            const status = document.getElementById('dataStatus');
+            if (rawData.length > 0) {
+                status.innerHTML = `
+                    ✅ <strong>${rawData.length} records</strong> loaded<br>
+                    <small>${allColumns.length} columns detected</small>
+                `;
+                status.style.background = '#d4edda';
+                status.style.color = '#155724';
+            }
+        }
+
+        function openUploadModal() {
+            document.getElementById('uploadModal').classList.add('active');
+        }
+
+        function closeUploadModal() {
+            document.getElementById('uploadModal').classList.remove('active');
+        }
+
+        function toggleEditMode() {
+            editMode = !editMode;
+            const text = document.getElementById('editModeText');
+            text.textContent = editMode ? '🔓 Edit Mode: ON' : '🔒 Edit Mode: OFF';
+            
+            const grid = document.getElementById('dashboardGrid');
+            const sortable = Sortable.get(grid);
+            if (sortable) {
+                sortable.option('disabled', !editMode);
+            }
+            
+            // Show/hide component actions
+            document.querySelectorAll('.component-actions').forEach(actions => {
+                actions.style.display = editMode ? 'flex' : 'none';
+            });
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function addComponent(type) {
+            if (rawData.length === 0 && type !== 'text') {
+                alert('Please upload data first!');
+                return;
+            }
+            
+            const grid = document.getElementById('dashboardGrid');
+            const emptyState = grid.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+            
+            const componentId = `component-${componentCounter++}`;
+            const component = {
+                id: componentId,
+                type: type,
+                title: getComponentTitle(type),
+                settings: getDefaultSettings(type)
+            };
+            
+            components.push(component);
+            
+            const element = createComponentElement(component);
+            grid.appendChild(element);
+            
+            if (type !== 'text') {
+                renderComponent(componentId);
+            }
+        }
+
+        function getComponentTitle(type) {
+            const titles = {
+                'filter': 'Filter',
+                'line': 'Line Chart',
+                'bar': 'Bar Chart',
+                'scatter': 'Scatter Plot',
+                'spread': 'Spread Analysis',
+                'radar': 'Radar Chart',
+                'pie': 'Pie Chart',
+                'text': 'Text Box',
+                'stats': 'Statistics Summary',
+                'table': 'Data Table'
+            };
+            return titles[type] || 'Component';
+        }
+
+        function getDefaultSettings(type) {
+            const settings = {
+                xAxis: numericColumns[0] || allColumns[0],
+                yAxis: numericColumns[0] || '',
+                groupBy: '',
+                aggregation: 'mean',
+                filterColumn: filterColumns[0] || '',
+                size: type === 'text' || type === 'filter' || type === 'timeline' ? 'small' : 'chart'
+            };
+            
+            if (type === 'line' || type === 'bar' || type === 'scatter' || type === 'spread') {
+                const weeksCol = allColumns.find(col => col.toLowerCase().includes('week'));
+                if (weeksCol) settings.xAxis = weeksCol;
+            }
+            
+            return settings;
+        }
+
+        function createComponentElement(component) {
+            const div = document.createElement('div');
+            div.id = component.id;
+            div.className = `dashboard-component size-${component.settings.size}`;
+            
+            div.innerHTML = `
+                <div class="component-header">
+                    <div class="component-title">
+                        <input type="text" value="${component.title}" 
+                               onchange="updateComponentTitle('${component.id}', this.value)"
+                               ${!editMode ? 'readonly' : ''}>
+                    </div>
+                    <div class="component-actions" style="display: ${editMode ? 'flex' : 'none'}">
+                        <button class="action-btn" onclick="configureComponent('${component.id}')">⚙️</button>
+                        <button class="action-btn" onclick="resizeComponent('${component.id}')">↔️</button>
+                        <button class="action-btn" onclick="removeComponent('${component.id}')">🗑️</button>
+                    </div>
+                </div>
+                <div class="component-content" id="${component.id}-content">
+                    ${getComponentContent(component)}
+                </div>
+            `;
+            
+            return div;
+        }
+
+        function getComponentContent(component) {
+            switch(component.type) {
+                case 'text':
+                    return `
+                        <div class="text-box-content">
+                            <textarea class="text-editor" 
+                                      placeholder="Enter your text here..."
+                                      onchange="updateTextContent('${component.id}', this.value)"></textarea>
+                        </div>
+                    `;
+                case 'filter':
+                    return `<div id="${component.id}-filter"></div>`;
+                case 'stats':
+                    return `<div id="${component.id}-stats"></div>`;
+                case 'table':
+                    return `<div id="${component.id}-table"></div>`;
+                default:
+                    return `<div class="chart-canvas-container"><canvas id="${component.id}-canvas"></canvas></div>`;
+            }
+        }
+
+        function updateComponentTitle(id, title) {
+            const component = components.find(c => c.id === id);
+            if (component) component.title = title;
+        }
+
+        function updateTextContent(id, content) {
+            const component = components.find(c => c.id === id);
+            if (component) {
+                component.settings.textContent = content;
+            }
+        }
+
+        function configureComponent(id) {
+            const component = components.find(c => c.id === id);
+            if (!component) return;
+            
+            const content = document.getElementById(`${id}-content`);
+            
+            let settingsHTML = '<div class="settings-panel" style="max-height: 500px; overflow-y: auto;"><h4>⚙️ Component Settings</h4>';
+            
+            if (component.type === 'filter') {
+                settingsHTML += `
+                    <div class="settings-group">
+                        <label>Filter Column</label>
+                        <select onchange="updateSetting('${id}', 'filterColumn', this.value)">
+                            ${filterColumns.map(col => `
+                                <option value="${col}" ${component.settings.filterColumn === col ? 'selected' : ''}>
+                                    ${col}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                `;
+            } else if (['line', 'bar', 'scatter', 'spread', 'pie'].includes(component.type)) {
+                // Data Selection
+                settingsHTML += '<h5 style="margin-top: 15px; color: #2a5298;">📊 Data Selection</h5>';
+                
+                settingsHTML += `
+                    <div class="settings-group">
+                        <label>X-Axis Data</label>
+                        <select onchange="updateSetting('${id}', 'xAxis', this.value)">
+                            ${allColumns.map(col => `
+                                <option value="${col}" ${component.settings.xAxis === col ? 'selected' : ''}>
+                                    ${col}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="settings-group">
+                        <label>Y-Axis Data</label>
+                        <select onchange="updateSetting('${id}', 'yAxis', this.value)">
+                            ${numericColumns.map(col => `
+                                <option value="${col}" ${component.settings.yAxis === col ? 'selected' : ''}>
+                                    ${col}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="settings-group">
+                        <label>Group By / Color By (Optional)</label>
+                        <select onchange="updateSetting('${id}', 'groupBy', this.value)">
+                            <option value="">None</option>
+                            ${filterColumns.map(col => `
+                                <option value="${col}" ${component.settings.groupBy === col ? 'selected' : ''}>
+                                    ${col}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="settings-group">
+                        <label>Aggregation Method</label>
+                        <select onchange="updateSetting('${id}', 'aggregation', this.value)">
+                            <option value="mean" ${component.settings.aggregation === 'mean' ? 'selected' : ''}>Average (Mean)</option>
+                            <option value="sum" ${component.settings.aggregation === 'sum' ? 'selected' : ''}>Sum</option>
+                            <option value="count" ${component.settings.aggregation === 'count' ? 'selected' : ''}>Count</option>
+                            <option value="min" ${component.settings.aggregation === 'min' ? 'selected' : ''}>Minimum</option>
+                            <option value="max" ${component.settings.aggregation === 'max' ? 'selected' : ''}>Maximum</option>
+                            <option value="median" ${component.settings.aggregation === 'median' ? 'selected' : ''}>Median</option>
+                        </select>
+                    </div>
+                `;
+                
+                // Axis Labels Customization
+                settingsHTML += '<h5 style="margin-top: 15px; color: #2a5298;">🏷️ Axis Labels</h5>';
+                settingsHTML += `
+                    <div class="settings-group">
+                        <label>X-Axis Label</label>
+                        <input type="text" 
+                               value="${component.settings.xAxisLabel || component.settings.xAxis || ''}"
+                               placeholder="Custom X-axis label"
+                               onchange="updateSetting('${id}', 'xAxisLabel', this.value)">
+                    </div>
+                    <div class="settings-group">
+                        <label>Y-Axis Label</label>
+                        <input type="text" 
+                               value="${component.settings.yAxisLabel || component.settings.yAxis || ''}"
+                               placeholder="Custom Y-axis label"
+                               onchange="updateSetting('${id}', 'yAxisLabel', this.value)">
+                    </div>
+                    <div class="settings-group">
+                        <label>Chart Title</label>
+                        <input type="text" 
+                               value="${component.settings.chartTitle || ''}"
+                               placeholder="Custom chart title"
+                               onchange="updateSetting('${id}', 'chartTitle', this.value)">
+                    </div>
+                `;
+                
+                // Color Customization
+                settingsHTML += '<h5 style="margin-top: 15px; color: #2a5298;">🎨 Colors</h5>';
+                settingsHTML += `
+                    <div class="settings-group">
+                        <label style="display: flex; align-items: center;">
+                            <input type="checkbox" 
+                                   ${component.settings.useCustomChartColors ? 'checked' : ''}
+                                   onchange="updateSetting('${id}', 'useCustomChartColors', this.checked); configureComponent('${id}')"
+                                   style="margin-right: 8px;">
+                            Use Custom Colors for This Chart
+                        </label>
+                    </div>
+                `;
+                
+                if (component.settings.useCustomChartColors) {
+                    settingsHTML += `
+                        <div class="settings-group">
+                            <label>Primary Color</label>
+                            <input type="color" 
+                                   value="${component.settings.color1 || '#2a5298'}"
+                                   onchange="updateSetting('${id}', 'color1', this.value)"
+                                   style="width: 100%; height: 40px; border-radius: 5px; cursor: pointer;">
+                        </div>
+                        <div class="settings-group">
+                            <label>Secondary Color</label>
+                            <input type="color" 
+                                   value="${component.settings.color2 || '#7e22ce'}"
+                                   onchange="updateSetting('${id}', 'color2', this.value)"
+                                   style="width: 100%; height: 40px; border-radius: 5px; cursor: pointer;">
+                        </div>
+                        <div class="settings-group">
+                            <label>Tertiary Color</label>
+                            <input type="color" 
+                                   value="${component.settings.color3 || '#dc3545'}"
+                                   onchange="updateSetting('${id}', 'color3', this.value)"
+                                   style="width: 100%; height: 40px; border-radius: 5px; cursor: pointer;">
+                        </div>
+                        <div class="settings-group">
+                            <label>Background Fill Opacity</label>
+                            <input type="range" min="0" max="100" 
+                                   value="${(component.settings.fillOpacity || 0.2) * 100}"
+                                   onchange="updateSetting('${id}', 'fillOpacity', this.value / 100)"
+                                   style="width: 100%;">
+                            <small>${Math.round((component.settings.fillOpacity || 0.2) * 100)}%</small>
+                        </div>
+                    `;
+                }
+                
+                // Display Options
+                settingsHTML += '<h5 style="margin-top: 15px; color: #2a5298;">📐 Display Options</h5>';
+                settingsHTML += `
+                    <div class="settings-group">
+                        <label style="display: flex; align-items: center;">
+                            <input type="checkbox" 
+                                   ${component.settings.showLegend !== false ? 'checked' : ''}
+                                   onchange="updateSetting('${id}', 'showLegend', this.checked)"
+                                   style="margin-right: 8px;">
+                            Show Legend
+                        </label>
+                    </div>
+                    <div class="settings-group">
+                        <label>Legend Position</label>
+                        <select onchange="updateSetting('${id}', 'legendPosition', this.value)">
+                            <option value="top" ${component.settings.legendPosition === 'top' ? 'selected' : ''}>Top</option>
+                            <option value="right" ${component.settings.legendPosition === 'right' ? 'selected' : ''}>Right</option>
+                            <option value="bottom" ${component.settings.legendPosition === 'bottom' || !component.settings.legendPosition ? 'selected' : ''}>Bottom</option>
+                            <option value="left" ${component.settings.legendPosition === 'left' ? 'selected' : ''}>Left</option>
+                        </select>
+                    </div>
+                    <div class="settings-group">
+                        <label style="display: flex; align-items: center;">
+                            <input type="checkbox" 
+                                   ${component.settings.showGridlines ? 'checked' : ''}
+                                   onchange="updateSetting('${id}', 'showGridlines', this.checked)"
+                                   style="margin-right: 8px;">
+                            Show Gridlines
+                        </label>
+                    </div>
+                    <div class="settings-group">
+                        <label>Point Size</label>
+                        <input type="range" min="1" max="10" 
+                               value="${component.settings.pointSize || 4}"
+                               onchange="updateSetting('${id}', 'pointSize', parseInt(this.value))"
+                               style="width: 100%;">
+                        <small>${component.settings.pointSize || 4}px</small>
+                    </div>
+                    <div class="settings-group">
+                        <label>Line Width</label>
+                        <input type="range" min="1" max="8" 
+                               value="${component.settings.lineWidth || 3}"
+                               onchange="updateSetting('${id}', 'lineWidth', parseInt(this.value))"
+                               style="width: 100%;">
+                        <small>${component.settings.lineWidth || 3}px</small>
+                    </div>
+                `;
+                
+                // Axis Range Controls
+                settingsHTML += '<h5 style="margin-top: 15px; color: #2a5298;">📏 Axis Ranges</h5>';
+                settingsHTML += `
+                    <div class="settings-group">
+                        <label style="display: flex; align-items: center;">
+                            <input type="checkbox" 
+                                   ${component.settings.yAxisStartZero !== false ? 'checked' : ''}
+                                   onchange="updateSetting('${id}', 'yAxisStartZero', this.checked)"
+                                   style="margin-right: 8px;">
+                            Y-Axis Starts at Zero
+                        </label>
+                    </div>
+                    <div class="settings-group">
+                        <label style="display: flex; align-items: center;">
+                            <input type="checkbox" 
+                                   ${component.settings.customYRange ? 'checked' : ''}
+                                   onchange="updateSetting('${id}', 'customYRange', this.checked); configureComponent('${id}')"
+                                   style="margin-right: 8px;">
+                            Set Custom Y-Axis Range
+                        </label>
+                    </div>
+                `;
+                
+                if (component.settings.customYRange) {
+                    settingsHTML += `
+                        <div class="settings-group">
+                            <label>Y-Axis Minimum</label>
+                            <input type="number" 
+                                   value="${component.settings.yMin || 0}"
+                                   onchange="updateSetting('${id}', 'yMin', parseFloat(this.value))"
+                                   step="0.1">
+                        </div>
+                        <div class="settings-group">
+                            <label>Y-Axis Maximum</label>
+                            <input type="number" 
+                                   value="${component.settings.yMax || 100}"
+                                   onchange="updateSetting('${id}', 'yMax', parseFloat(this.value))"
+                                   step="0.1">
+                        </div>
+                    `;
+                }
+            } else if (component.type === 'radar') {
+                settingsHTML += `
+                    <div class="settings-group">
+                        <label>Group By</label>
+                        <select onchange="updateSetting('${id}', 'groupBy', this.value)">
+                            ${filterColumns.map(col => `
+                                <option value="${col}" ${component.settings.groupBy === col ? 'selected' : ''}>
+                                    ${col}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="settings-group">
+                        <label>Chart Title</label>
+                        <input type="text" 
+                               value="${component.settings.chartTitle || ''}"
+                               placeholder="Custom chart title"
+                               onchange="updateSetting('${id}', 'chartTitle', this.value)">
+                    </div>
+                `;
+            }
+            
+            settingsHTML += `
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="control-btn btn-primary" style="flex: 1;" 
+                            onclick="applySettings('${id}')">
+                        ✅ Apply Settings
+                    </button>
+                    <button class="control-btn btn-secondary" style="flex: 1;" 
+                            onclick="cancelSettings('${id}')">
+                        ❌ Cancel
+                    </button>
+                </div>
+            </div>`;
+            
+            // Store original content
+            const originalContent = content.innerHTML;
+            component.originalContent = originalContent;
+            
+            content.innerHTML = settingsHTML + `<div style="display: none;">${originalContent}</div>`;
+        }
+
+        function updateSetting(id, key, value) {
+            const component = components.find(c => c.id === id);
+            if (component) {
+                component.settings[key] = value;
+            }
+        }
+
+        function applySettings(id) {
+            const settingsPanel = document.querySelector(`#${id} .settings-panel`);
+            if (settingsPanel) {
+                const hiddenContent = settingsPanel.nextElementSibling;
+                if (hiddenContent) {
+                    hiddenContent.remove();
+                }
+                settingsPanel.remove();
+            }
+            renderComponent(id);
+        }
+
+        function cancelSettings(id) {
+            const component = components.find(c => c.id === id);
+            const content = document.getElementById(`${id}-content`);
+            
+            if (component.originalContent) {
+                content.innerHTML = component.originalContent;
+            } else {
+                const settingsPanel = content.querySelector('.settings-panel');
+                if (settingsPanel) {
+                    settingsPanel.remove();
+                }
+            }
+        }
+
+        function resizeComponent(id) {
+            const element = document.getElementById(id);
+            const currentSize = element.className.match(/size-(\w+)/)[1];
+            
+            const sizes = ['small', 'chart', 'medium', 'large'];
+            const currentIndex = sizes.indexOf(currentSize);
+            const nextSize = sizes[(currentIndex + 1) % sizes.length];
+            
+            element.className = element.className.replace(/size-\w+/, `size-${nextSize}`);
+            
+            const component = components.find(c => c.id === id);
+            if (component) component.settings.size = nextSize;
+        }
+
+        function removeComponent(id) {
+            if (!confirm('Remove this component?')) return;
+            
+            const element = document.getElementById(id);
+            if (element) element.remove();
+            
+            const chart = charts[id];
+            if (chart) {
+                chart.destroy();
+                delete charts[id];
+            }
+            
+            components = components.filter(c => c.id !== id);
+            
+            if (components.length === 0) {
+                const grid = document.getElementById('dashboardGrid');
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: span 12;">
+                        <div class="empty-state-icon">🎨</div>
+                        <h2>Start Building Your Dashboard</h2>
+                        <p>Upload your data and add components from the sidebar</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderComponent(id) {
+            const component = components.find(c => c.id === id);
+            if (!component) return;
+            
+            applyFilters();
+            
+            switch(component.type) {
+                case 'filter':
+                    renderFilter(component);
+                    break;
+                case 'stats':
+                    renderStats(component);
+                    break;
+                case 'table':
+                    renderTable(component);
+                    break;
+                case 'line':
+                case 'bar':
+                case 'scatter':
+                case 'spread':
+                case 'radar':
+                case 'pie':
+                    renderChart(component);
+                    break;
+            }
+        }
+
+        function renderFilter(component) {
+            const container = document.getElementById(`${component.id}-filter`);
+            const column = component.settings.filterColumn;
+            
+            if (!column) return;
+            
+            const uniqueValues = [...new Set(rawData.map(row => row[column]).filter(v => v))];
+            
+            let html = `
+                <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #495057;">
+                    ${column}
+                </label>
+                <select class="filter-select" onchange="applyFilter('${column}', this.value)">
+                    <option value="all">All</option>
+                    ${uniqueValues.sort().map(val => `
+                        <option value="${val}" ${activeFilters[column] === val ? 'selected' : ''}>
+                            ${val}
+                        </option>
+                    `).join('')}
+                </select>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        function renderStats(component) {
+            const container = document.getElementById(`${component.id}-stats`);
+            
+            const totalRecords = filteredData.length;
+            const stats = {};
+            
+            numericColumns.slice(0, 3).forEach(col => {
+                const values = filteredData.map(row => parseFloat(row[col])).filter(v => !isNaN(v));
+                stats[col] = values.reduce((a, b) => a + b, 0) / values.length;
+            });
+            
+            let html = '<div class="stats-grid-comp">';
+            html += `
+                <div class="stat-card-comp">
+                    <div class="stat-value-comp">${totalRecords}</div>
+                    <div class="stat-label-comp">Total Records</div>
+                </div>
+            `;
+            
+            Object.keys(stats).forEach(key => {
+                html += `
+                    <div class="stat-card-comp">
+                        <div class="stat-value-comp">${formatValue(stats[key], key)}</div>
+                        <div class="stat-label-comp">${key.substring(0, 20)}</div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function renderTable(component) {
+            const container = document.getElementById(`${component.id}-table`);
+            
+            const displayColumns = allColumns.slice(0, 8);
+            const displayRows = filteredData.slice(0, 50);
+            
+            let html = `
+                <div style="overflow-x: auto; max-height: 400px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85em;">
+                        <thead style="position: sticky; top: 0; background: #2a5298; color: white;">
+                            <tr>
+                                ${displayColumns.map(col => `<th style="padding: 10px; text-align: left;">${col}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${displayRows.map(row => `
+                                <tr style="border-bottom: 1px solid #e9ecef;">
+                                    ${displayColumns.map(col => `<td style="padding: 8px;">${row[col] || '-'}</td>`).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        function renderChart(component) {
+            const canvas = document.getElementById(`${component.id}-canvas`);
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            
+            if (charts[component.id]) {
+                charts[component.id].destroy();
+            }
+            
+            const chartConfig = getChartConfig(component);
+            charts[component.id] = new Chart(ctx, chartConfig);
+        }
+
+        function getChartConfig(component) {
+            const { xAxis, yAxis, groupBy, aggregation } = component.settings;
+            
+            if (!xAxis || !yAxis) {
+                return {
+                    type: 'bar',
+                    data: { labels: ['No Data'], datasets: [{ data: [0] }] }
+                };
+            }
+            
+            let config = {};
+            
+            switch(component.type) {
+                case 'line':
+                case 'spread':
+                    config = createLineChartConfig(xAxis, yAxis, groupBy, aggregation, component.type === 'spread');
+                    break;
+                case 'bar':
+                    config = createBarChartConfig(xAxis, yAxis, groupBy, aggregation);
+                    break;
+                case 'scatter':
+                    config = createScatterConfig(xAxis, yAxis, groupBy);
+                    break;
+                case 'pie':
+                    config = createPieConfig(xAxis, yAxis, aggregation);
+                    break;
+                case 'radar':
+                    config = createRadarConfig(groupBy || xAxis);
+                    break;
+            }
+            
+            return config;
+        }
+
+        function createLineChartConfig(xAxis, yAxis, groupBy, aggregation, showSpread) {
+            const component = components.find(c => 
+                c.settings.xAxis === xAxis && c.settings.yAxis === yAxis
+            ) || {};
+            const settings = component.settings || {};
+            
+            const datasets = [];
+            
+            // Get colors
+            let colors;
+            if (settings.useCustomChartColors) {
+                colors = [
+                    settings.color1 || '#2a5298',
+                    settings.color2 || '#7e22ce',
+                    settings.color3 || '#dc3545'
+                ].map(hex => hexToRgba(hex, 0.8));
+            } else {
+                colors = generateColors(10);
+            }
+            
+            const fillOpacity = settings.fillOpacity || 0.2;
+            const pointSize = settings.pointSize || 4;
+            const lineWidth = settings.lineWidth || 3;
+            
+            if (groupBy) {
+                const groups = [...new Set(filteredData.map(row => row[groupBy]))];
+                
+                groups.forEach((group, idx) => {
+                    const groupData = filteredData.filter(row => row[groupBy] === group);
+                    const color = colors[idx % colors.length];
+                    
+                    if (showSpread) {
+                        const individualPoints = groupData.map(row => ({
+                            x: row[xAxis],
+                            y: parseFloat(row[yAxis]) || 0
+                        }));
+                        
+                        datasets.push({
+                            label: `${group} (Individual)`,
+                            data: individualPoints,
+                            backgroundColor: color.replace('0.8', '0.4'),
+                            borderColor: color,
+                            showLine: false,
+                            pointRadius: Math.max(2, pointSize - 1)
+                        });
+                    }
+                    
+                    const aggregated = aggregateData(groupData, xAxis, yAxis, aggregation);
+                    datasets.push({
+                        label: `${group} (${aggregation})`,
+                        data: aggregated,
+                        borderColor: color,
+                        backgroundColor: color.replace('0.8', fillOpacity.toString()),
+                        tension: 0.4,
+                        borderWidth: lineWidth,
+                        pointRadius: showSpread ? pointSize + 2 : pointSize
+                    });
+                });
+            } else {
+                const color = colors[0];
+                
+                if (showSpread) {
+                    const individualPoints = filteredData.map(row => ({
+                        x: row[xAxis],
+                        y: parseFloat(row[yAxis]) || 0
+                    }));
+                    
+                    datasets.push({
+                        label: 'Individual Data',
+                        data: individualPoints,
+                        backgroundColor: color.replace('0.8', '0.4'),
+                        borderColor: color,
+                        showLine: false,
+                        pointRadius: Math.max(2, pointSize - 1)
+                    });
+                }
+                
+                const aggregated = aggregateData(filteredData, xAxis, yAxis, aggregation);
+                datasets.push({
+                    label: `${aggregation.toUpperCase()} ${yAxis}`,
+                    data: aggregated,
+                    borderColor: color,
+                    backgroundColor: color.replace('0.8', fillOpacity.toString()),
+                    tension: 0.4,
+                    borderWidth: lineWidth,
+                    pointRadius: showSpread ? pointSize + 2 : pointSize
+                });
+            }
+            
+            const xLabel = settings.xAxisLabel || xAxis;
+            const yLabel = settings.yAxisLabel || yAxis + ' (' + getUnit(yAxis) + ')';
+            const chartTitle = settings.chartTitle || `${yAxis} by ${xAxis}`;
+            
+            return {
+                type: showSpread ? 'scatter' : 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: { display: true, text: xLabel },
+                            grid: { display: settings.showGridlines || false }
+                        },
+                        y: {
+                            title: { display: true, text: yLabel },
+                            grid: { display: settings.showGridlines || false },
+                            beginAtZero: settings.yAxisStartZero !== false,
+                            min: settings.customYRange ? settings.yMin : undefined,
+                            max: settings.customYRange ? settings.yMax : undefined,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(1) + getUnit(yAxis);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: !!chartTitle,
+                            text: chartTitle,
+                            font: { size: 16 }
+                        },
+                        legend: {
+                            display: settings.showLegend !== false,
+                            position: settings.legendPosition || 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${formatValue(context.parsed.y, yAxis)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        function hexToRgba(hex, opacity = 0.8) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        }
+
+        function createBarChartConfig(xAxis, yAxis, groupBy, aggregation) {
+            const component = components.find(c => 
+                c.settings.xAxis === xAxis && c.settings.yAxis === yAxis
+            ) || {};
+            const settings = component.settings || {};
+            
+            const aggregated = aggregateData(filteredData, xAxis, yAxis, aggregation);
+            const data = Object.entries(aggregated).map(([x, y]) => ({ x, y }));
+            
+            let color;
+            if (settings.useCustomChartColors) {
+                color = hexToRgba(settings.color1 || '#2a5298', 0.8);
+            } else {
+                color = 'rgba(42, 82, 152, 0.8)';
+            }
+            
+            const xLabel = settings.xAxisLabel || xAxis;
+            const yLabel = settings.yAxisLabel || yAxis + ' (' + getUnit(yAxis) + ')';
+            const chartTitle = settings.chartTitle || `${yAxis} by ${xAxis}`;
+            
+            return {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.x),
+                    datasets: [{
+                        label: yAxis,
+                        data: data.map(d => d.y),
+                        backgroundColor: color,
+                        borderColor: color.replace('0.8', '1'),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { 
+                            title: { display: true, text: xLabel },
+                            grid: { display: settings.showGridlines || false } 
+                        },
+                        y: {
+                            title: { display: true, text: yLabel },
+                            grid: { display: settings.showGridlines || false },
+                            beginAtZero: settings.yAxisStartZero !== false,
+                            min: settings.customYRange ? settings.yMin : undefined,
+                            max: settings.customYRange ? settings.yMax : undefined,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(1) + getUnit(yAxis);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: !!chartTitle,
+                            text: chartTitle,
+                            font: { size: 16 }
+                        },
+                        legend: {
+                            display: settings.showLegend !== false,
+                            position: settings.legendPosition || 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return formatValue(context.parsed.y, yAxis);
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        function createScatterConfig(xAxis, yAxis, groupBy) {
+            const component = components.find(c => 
+                c.settings.xAxis === xAxis && c.settings.yAxis === yAxis
+            ) || {};
+            const settings = component.settings || {};
+            
+            const data = filteredData.map(row => ({
+                x: parseFloat(row[xAxis]) || 0,
+                y: parseFloat(row[yAxis]) || 0
+            }));
+            
+            let color;
+            if (settings.useCustomChartColors) {
+                color = hexToRgba(settings.color1 || '#2a5298', 0.6);
+            } else {
+                color = 'rgba(42, 82, 152, 0.6)';
+            }
+            
+            const pointSize = settings.pointSize || 4;
+            const xLabel = settings.xAxisLabel || xAxis;
+            const yLabel = settings.yAxisLabel || yAxis;
+            const chartTitle = settings.chartTitle || `${yAxis} vs ${xAxis}`;
+            
+            return {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Data Points',
+                        data: data,
+                        backgroundColor: color,
+                        pointRadius: pointSize
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: { display: true, text: xLabel },
+                            grid: { display: settings.showGridlines || false }
+                        },
+                        y: {
+                            title: { display: true, text: yLabel },
+                            grid: { display: settings.showGridlines || false },
+                            beginAtZero: settings.yAxisStartZero !== false,
+                            min: settings.customYRange ? settings.yMin : undefined,
+                            max: settings.customYRange ? settings.yMax : undefined
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: !!chartTitle,
+                            text: chartTitle,
+                            font: { size: 16 }
+                        },
+                        legend: {
+                            display: settings.showLegend !== false,
+                            position: settings.legendPosition || 'bottom'
+                        }
+                    }
+                }
+            };
+        }
+
+        function createPieConfig(xAxis, yAxis, aggregation) {
+            const component = components.find(c => 
+                c.settings.xAxis === xAxis && c.settings.yAxis === yAxis
+            ) || {};
+            const settings = component.settings || {};
+            
+            const aggregated = aggregateData(filteredData, xAxis, yAxis, aggregation);
+            const labels = Object.keys(aggregated);
+            const data = Object.values(aggregated);
+            
+            let colors;
+            if (settings.useCustomChartColors) {
+                colors = [
+                    settings.color1 || '#2a5298',
+                    settings.color2 || '#7e22ce',
+                    settings.color3 || '#dc3545'
+                ].map(hex => hexToRgba(hex, 0.8));
+                // Repeat colors if needed
+                while (colors.length < labels.length) {
+                    colors = [...colors, ...colors];
+                }
+                colors = colors.slice(0, labels.length);
+            } else {
+                colors = generateColors(labels.length);
+            }
+            
+            const chartTitle = settings.chartTitle || `${yAxis} Distribution`;
+            
+            return {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: !!chartTitle,
+                            text: chartTitle,
+                            font: { size: 16 }
+                        },
+                        legend: { 
+                            display: settings.showLegend !== false,
+                            position: settings.legendPosition || 'right' 
+                        }
+                    }
+                }
+            };
+        }
+
+        function createRadarConfig(groupBy) {
+            const component = components.find(c => 
+                c.settings.groupBy === groupBy && c.type === 'radar'
+            ) || {};
+            const settings = component.settings || {};
+            
+            const metrics = numericColumns.slice(0, 6);
+            const groups = [...new Set(filteredData.map(row => row[groupBy]))].slice(0, 3);
+            
+            let colors;
+            if (settings.useCustomChartColors) {
+                colors = [
+                    settings.color1 || '#2a5298',
+                    settings.color2 || '#7e22ce',
+                    settings.color3 || '#dc3545'
+                ].map(hex => hexToRgba(hex, 0.8));
+            } else {
+                colors = generateColors(groups.length);
+            }
+            
+            const datasets = groups.map((group, idx) => {
+                const groupData = filteredData.filter(row => row[groupBy] === group);
+                const values = metrics.map(metric => {
+                    const vals = groupData.map(row => parseFloat(row[metric])).filter(v => !isNaN(v));
+                    return vals.reduce((a, b) => a + b, 0) / vals.length;
+                });
+                
+                return {
+                    label: group,
+                    data: values,
+                    backgroundColor: colors[idx].replace('0.8', '0.2'),
+                    borderColor: colors[idx],
+                    borderWidth: 2
+                };
+            });
+            
+            const chartTitle = settings.chartTitle || `Radar Comparison by ${groupBy}`;
+            
+            return {
+                type: 'radar',
+                data: {
+                    labels: metrics.map(m => m.substring(0, 15)),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: { 
+                            beginAtZero: true, 
+                            grid: { display: settings.showGridlines || false } 
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: !!chartTitle,
+                            text: chartTitle,
+                            font: { size: 16 }
+                        },
+                        legend: {
+                            display: settings.showLegend !== false,
+                            position: settings.legendPosition || 'bottom'
+                        }
+                    }
+                }
+            };
+        }
+
+        function aggregateData(data, xAxis, yAxis, method) {
+            const groups = {};
+            
+            data.forEach(row => {
+                const x = row[xAxis];
+                const y = parseFloat(row[yAxis]);
+                
+                if (!isNaN(y)) {
+                    if (!groups[x]) groups[x] = [];
+                    groups[x].push(y);
+                }
+            });
+            
+            const result = {};
+            Object.keys(groups).sort().forEach(key => {
+                const values = groups[key];
+                switch(method) {
+                    case 'mean':
+                        result[key] = values.reduce((a, b) => a + b, 0) / values.length;
+                        break;
+                    case 'sum':
+                        result[key] = values.reduce((a, b) => a + b, 0);
+                        break;
+                    case 'count':
+                        result[key] = values.length;
+                        break;
+                    case 'min':
+                        result[key] = Math.min(...values);
+                        break;
+                    case 'max':
+                        result[key] = Math.max(...values);
+                        break;
+                    case 'median':
+                        const sorted = values.sort((a, b) => a - b);
+                        const mid = Math.floor(sorted.length / 2);
+                        result[key] = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+                        break;
+                }
+            });
+            
+            return Object.entries(result).map(([x, y]) => ({ x, y }));
+        }
+
+        function applyFilter(column, value) {
+            if (value === 'all') {
+                delete activeFilters[column];
+            } else {
+                activeFilters[column] = value;
+            }
+            refreshDashboard();
+        }
+
+        function applyFilters() {
+            filteredData = rawData.filter(row => {
+                return Object.keys(activeFilters).every(key => {
+                    if (key.includes('_min')) {
+                        const col = key.replace('_min', '');
+                        const val = parseFloat(row[col]);
+                        return isNaN(val) || val >= activeFilters[key];
+                    }
+                    if (key.includes('_max')) {
+                        const col = key.replace('_max', '');
+                        const val = parseFloat(row[col]);
+                        return isNaN(val) || val <= activeFilters[key];
+                    }
+                    return row[key] === activeFilters[key];
+                });
+            });
+        }
+
+        function formatValue(value, metricName) {
+            if (isNaN(value)) return value;
+            
+            if (metricName.toLowerCase().includes('angle') || 
+                metricName.toLowerCase().includes('deg')) {
+                return value.toFixed(1) + '°';
+            }
+            
+            return value.toFixed(1) + '%';
+        }
+
+        function getUnit(metricName) {
+            if (metricName.toLowerCase().includes('angle') || 
+                metricName.toLowerCase().includes('deg')) {
+                return '°';
+            }
+            return '%';
+        }
+
+        function generateColors(count) {
+            if (useGlobalCustomColors) {
+                const hexToRgba = (hex, opacity = 0.8) => {
+                    const r = parseInt(hex.slice(1, 3), 16);
+                    const g = parseInt(hex.slice(3, 5), 16);
+                    const b = parseInt(hex.slice(5, 7), 16);
+                    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+                };
+                
+                const customColors = [
+                    hexToRgba(globalColors.primary),
+                    hexToRgba(globalColors.secondary),
+                    hexToRgba(globalColors.accent)
+                ];
+                
+                const colors = [];
+                for (let i = 0; i < count; i++) {
+                    colors.push(customColors[i % customColors.length]);
+                }
+                return colors;
+            }
+            
+            const baseColors = [
+                'rgba(42, 82, 152, 0.8)',
+                'rgba(126, 34, 206, 0.8)',
+                'rgba(220, 53, 69, 0.8)',
+                'rgba(40, 167, 69, 0.8)',
+                'rgba(255, 193, 7, 0.8)',
+                'rgba(23, 162, 184, 0.8)'
+            ];
+            
+            const colors = [];
+            for (let i = 0; i < count; i++) {
+                colors.push(baseColors[i % baseColors.length]);
+            }
+            return colors;
+        }
+
+        function refreshDashboard() {
+            components.forEach(comp => {
+                if (comp.type !== 'text') {
+                    renderComponent(comp.id);
+                }
+            });
+        }
+
+        function clearDashboard() {
+            if (!confirm('Clear entire dashboard? This cannot be undone.')) return;
+            
+            Object.values(charts).forEach(chart => chart.destroy());
+            charts = {};
+            components = [];
+            activeFilters = {};
+            
+            const grid = document.getElementById('dashboardGrid');
+            grid.innerHTML = `
+                <div class="empty-state" style="grid-column: span 12;">
+                    <div class="empty-state-icon">🎨</div>
+                    <h2>Start Building Your Dashboard</h2>
+                    <p>Upload your data and add components from the sidebar</p>
+                </div>
+            `;
+        }
+
+        function saveDashboard() {
+            const dashboard = {
+                title: document.getElementById('dashboardTitle').value,
+                components: components,
+                filters: activeFilters
+            };
+            
+            const json = JSON.stringify(dashboard, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'dashboard-layout.json';
+            a.click();
+            
+            alert('Dashboard layout saved! You can load it later.');
+        }
+
+        function exportDashboard() {
+            alert('Dashboard export feature coming soon! You can screenshot your dashboard for now.');
+        }
+    </script>
+</body>
+</html>
